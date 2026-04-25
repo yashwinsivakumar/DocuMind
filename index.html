@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DocuMind</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    .logo {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 6px;
+      letter-spacing: -1px;
+    }
+
+    .logo span { color: #4f8ef7; }
+
+    .tagline {
+      font-size: 0.95rem;
+      color: #666;
+      margin-bottom: 40px;
+    }
+
+    .card {
+      background: #1a1d27;
+      border: 1px solid #2a2d3a;
+      border-radius: 16px;
+      padding: 32px;
+      width: 100%;
+      max-width: 680px;
+      margin-bottom: 24px;
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 20px;
+    }
+
+    .upload-area {
+      border: 2px dashed #2a2d3a;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .upload-area:hover, .upload-area.dragover {
+      border-color: #4f8ef7;
+      background: #1e2236;
+    }
+
+    .upload-area input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .upload-icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+
+    .upload-area p {
+      color: #555;
+      font-size: 0.95rem;
+    }
+
+    .upload-area p span {
+      color: #4f8ef7;
+      font-weight: 600;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: #4f8ef7;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 16px;
+      transition: background 0.2s;
+    }
+
+    .btn:hover { background: #3a7be0; }
+    .btn:disabled { background: #2a2d3a; color: #555; cursor: not-allowed; }
+
+    .status {
+      margin-top: 14px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .status.success {
+      background: #0f2a1a;
+      border: 1px solid #1a5c35;
+      color: #4caf82;
+      display: block;
+    }
+
+    .status.error {
+      background: #2a0f0f;
+      border: 1px solid #5c1a1a;
+      color: #e06464;
+      display: block;
+    }
+
+    .status.loading {
+      background: #1a1f2e;
+      border: 1px solid #2a3050;
+      color: #4f8ef7;
+      display: block;
+    }
+
+    #ask-section { display: none; }
+
+    .doc-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #0f2a1a;
+      border: 1px solid #1a5c35;
+      color: #4caf82;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+    }
+
+    .question-input {
+      width: 100%;
+      background: #0f1117;
+      border: 1px solid #2a2d3a;
+      border-radius: 10px;
+      padding: 14px 16px;
+      color: #e0e0e0;
+      font-size: 1rem;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      transition: border 0.2s;
+      min-height: 80px;
+    }
+
+    .question-input:focus { border-color: #4f8ef7; }
+
+    .answer-box {
+      margin-top: 24px;
+      display: none;
+    }
+
+    .answer-box h3 {
+      font-size: 0.85rem;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+
+    .answer-text {
+      background: #0f1117;
+      border: 1px solid #2a2d3a;
+      border-radius: 10px;
+      padding: 20px;
+      font-size: 0.95rem;
+      line-height: 1.7;
+      color: #d0d0d0;
+      white-space: pre-wrap;
+    }
+
+    .sources-tag {
+      margin-top: 10px;
+      font-size: 0.8rem;
+      color: #444;
+    }
+
+    .history {
+      margin-top: 24px;
+    }
+
+    .history-item {
+      border-top: 1px solid #2a2d3a;
+      padding: 16px 0;
+    }
+
+    .history-item .q {
+      font-size: 0.85rem;
+      color: #4f8ef7;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .history-item .a {
+      font-size: 0.9rem;
+      color: #aaa;
+      line-height: 1.6;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #4f8ef7;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <div class="logo">Docu<span>Mind</span></div>
+  <p class="tagline">Upload a PDF. Ask anything about it.</p>
+
+  <!-- Upload Card -->
+  <div class="card">
+    <h2>📄 Upload Document</h2>
+    <div class="upload-area" id="upload-area">
+      <input type="file" id="file-input" accept=".pdf" />
+      <div class="upload-icon">📂</div>
+      <p><span>Click to upload</span> or drag and drop</p>
+      <p style="margin-top:6px; font-size:0.8rem;">PDF files only</p>
+    </div>
+    <div id="file-name" style="margin-top:12px; font-size:0.85rem; color:#555;"></div>
+    <button class="btn" id="upload-btn" disabled>Upload & Index</button>
+    <div class="status" id="upload-status"></div>
+  </div>
+
+  <!-- Ask Card -->
+  <div class="card" id="ask-section">
+    <h2>💬 Ask a Question</h2>
+    <div class="doc-badge" id="doc-badge">✅ <span id="doc-name"></span></div>
+    <textarea
+      class="question-input"
+      id="question-input"
+      placeholder="What is this document about? What are the main topics?"
+    ></textarea>
+    <button class="btn" id="ask-btn">Ask Gemini</button>
+
+    <div class="answer-box" id="answer-box">
+      <h3>Answer</h3>
+      <div class="answer-text" id="answer-text"></div>
+      <div class="sources-tag" id="sources-tag"></div>
+    </div>
+
+    <div class="history" id="history"></div>
+  </div>
+
+  <script>
+    const API = "http://127.0.0.1:8000";
+    let currentDocId = null;
+    let currentFilename = null;
+    let qaHistory = [];
+
+    const fileInput = document.getElementById("file-input");
+    const uploadArea = document.getElementById("upload-area");
+    const uploadBtn = document.getElementById("upload-btn");
+    const uploadStatus = document.getElementById("upload-status");
+    const fileNameEl = document.getElementById("file-name");
+    const askSection = document.getElementById("ask-section");
+    const questionInput = document.getElementById("question-input");
+    const askBtn = document.getElementById("ask-btn");
+    const answerBox = document.getElementById("answer-box");
+    const answerText = document.getElementById("answer-text");
+    const sourcesTag = document.getElementById("sources-tag");
+    const docName = document.getElementById("doc-name");
+    const history = document.getElementById("history");
+
+    // Drag and drop
+    uploadArea.addEventListener("dragover", e => {
+      e.preventDefault();
+      uploadArea.classList.add("dragover");
+    });
+
+    uploadArea.addEventListener("dragleave", () => {
+      uploadArea.classList.remove("dragover");
+    });
+
+    uploadArea.addEventListener("drop", e => {
+      e.preventDefault();
+      uploadArea.classList.remove("dragover");
+      const file = e.dataTransfer.files[0];
+      if (file && file.name.endsWith(".pdf")) {
+        fileInput.files = e.dataTransfer.files;
+        handleFileSelect(file);
+      }
+    });
+
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files[0]) handleFileSelect(fileInput.files[0]);
+    });
+
+    function handleFileSelect(file) {
+      fileNameEl.textContent = `Selected: ${file.name}`;
+      uploadBtn.disabled = false;
+    }
+
+    // Upload PDF
+    uploadBtn.addEventListener("click", async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      uploadBtn.disabled = true;
+      uploadStatus.className = "status loading";
+      uploadStatus.innerHTML = `<span class="spinner"></span> Uploading and indexing ${file.name}...`;
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const res = await fetch(`${API}/upload`, {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.detail || "Upload failed");
+
+        currentDocId = data.doc_id;
+        currentFilename = data.filename;
+
+        uploadStatus.className = "status success";
+        uploadStatus.innerHTML = `✅ Indexed ${data.chunks_stored} chunks from "${data.filename}"`;
+
+        docName.textContent = data.filename;
+        askSection.style.display = "block";
+        askSection.scrollIntoView({ behavior: "smooth" });
+
+      } catch (err) {
+        uploadStatus.className = "status error";
+        uploadStatus.textContent = `❌ ${err.message}`;
+        uploadBtn.disabled = false;
+      }
+    });
+
+    // Ask question
+    askBtn.addEventListener("click", async () => {
+      const question = questionInput.value.trim();
+      if (!question || !currentDocId) return;
+
+      askBtn.disabled = true;
+      askBtn.innerHTML = `<span class="spinner"></span> Searching...`;
+      answerBox.style.display = "none";
+
+      try {
+        const res = await fetch(`${API}/ask`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ doc_id: currentDocId, question })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Search failed");
+
+        answerText.textContent = data.answer;
+        sourcesTag.textContent = `Based on ${data.sources_used} relevant sections from the document`;
+        answerBox.style.display = "block";
+
+        // Add to history
+        qaHistory.unshift({ q: question, a: data.answer });
+        renderHistory();
+
+        questionInput.value = "";
+
+      } catch (err) {
+        answerText.textContent = `Error: ${err.message}`;
+        answerBox.style.display = "block";
+      } finally {
+        askBtn.disabled = false;
+        askBtn.textContent = "Ask Gemini";
+      }
+    });
+
+    // Ask on Enter key
+    questionInput.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        askBtn.click();
+      }
+    });
+
+    function renderHistory() {
+      if (qaHistory.length <= 1) return;
+      history.innerHTML = qaHistory.slice(1).map(item => `
+        <div class="history-item">
+          <div class="q">Q: ${item.q}</div>
+          <div class="a">${item.a}</div>
+        </div>
+      `).join("");
+    }
+  </script>
+</body>
+</html>
