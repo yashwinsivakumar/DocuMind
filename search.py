@@ -80,3 +80,22 @@ def search_and_answer(doc_id: str, question: str) -> dict:
         "answer": answer,
         "source_chunks": chunks
     }
+
+def general_ask(question: str) -> str:
+    """
+    Answers any question freely without document context.
+    Used for follow-up or general questions.
+    """
+    prompt = f"""You are a helpful AI assistant called DocuMind.
+Answer the following question clearly and helpfully.
+
+QUESTION: {question}
+
+ANSWER:"""
+
+    response = gemini_client.models.generate_content(
+        model="gemini-3-flash-preview",
+        contents=prompt
+    )
+
+    return response.text

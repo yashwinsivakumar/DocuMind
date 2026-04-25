@@ -98,3 +98,27 @@ def list_documents():
     Returns all uploaded documents in this session.
     """
     return {"documents": documents}
+
+class GeneralAskRequest(BaseModel):
+    question: str
+
+
+@app.post("/general-ask")
+async def general_ask_endpoint(request: GeneralAskRequest):
+    """
+    Answers any general question without document context.
+    """
+    if not request.question.strip():
+        raise HTTPException(status_code=400, detail="Question cannot be empty.")
+
+    try:
+        from search import general_ask
+        answer = general_ask(request.question)
+        return {
+            "question": request.question,
+            "answer": answer,
+            "mode": "general"
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get answer: {str(e)}")

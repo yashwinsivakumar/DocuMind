@@ -75,20 +75,11 @@
       cursor: pointer;
     }
 
-    .upload-icon {
-      font-size: 2.5rem;
-      margin-bottom: 12px;
-    }
+    .upload-icon { font-size: 2.5rem; margin-bottom: 12px; }
 
-    .upload-area p {
-      color: #555;
-      font-size: 0.95rem;
-    }
+    .upload-area p { color: #555; font-size: 0.95rem; }
 
-    .upload-area p span {
-      color: #4f8ef7;
-      font-weight: 600;
-    }
+    .upload-area p span { color: #4f8ef7; font-weight: 600; }
 
     .btn {
       width: 100%;
@@ -151,6 +142,48 @@
       margin-bottom: 20px;
     }
 
+    /* Mode toggle */
+    .mode-toggle {
+      display: flex;
+      background: #0f1117;
+      border: 1px solid #2a2d3a;
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 20px;
+      gap: 4px;
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: transparent;
+      color: #555;
+    }
+
+    .mode-btn.active {
+      background: #4f8ef7;
+      color: white;
+    }
+
+    .mode-hint {
+      font-size: 0.8rem;
+      color: #444;
+      margin-bottom: 14px;
+      padding: 8px 12px;
+      background: #0f1117;
+      border-radius: 8px;
+      border-left: 3px solid #2a2d3a;
+    }
+
+    .mode-hint.doc { border-left-color: #4f8ef7; }
+    .mode-hint.general { border-left-color: #a855f7; }
+
     .question-input {
       width: 100%;
       background: #0f1117;
@@ -192,15 +225,28 @@
       white-space: pre-wrap;
     }
 
-    .sources-tag {
-      margin-top: 10px;
-      font-size: 0.8rem;
-      color: #444;
+    .mode-label {
+      display: inline-block;
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      font-weight: 600;
     }
 
-    .history {
-      margin-top: 24px;
+    .mode-label.doc {
+      background: #1a2a4a;
+      color: #4f8ef7;
     }
+
+    .mode-label.general {
+      background: #2a1a4a;
+      color: #a855f7;
+    }
+
+    .sources-tag { margin-top: 10px; font-size: 0.8rem; color: #444; }
+
+    .history { margin-top: 24px; }
 
     .history-item {
       border-top: 1px solid #2a2d3a;
@@ -214,11 +260,7 @@
       font-weight: 600;
     }
 
-    .history-item .a {
-      font-size: 0.9rem;
-      color: #aaa;
-      line-height: 1.6;
-    }
+    .history-item .a { font-size: 0.9rem; color: #aaa; line-height: 1.6; }
 
     .spinner {
       display: inline-block;
@@ -257,16 +299,36 @@
   <!-- Ask Card -->
   <div class="card" id="ask-section">
     <h2>💬 Ask a Question</h2>
-    <div class="doc-badge" id="doc-badge">✅ <span id="doc-name"></span></div>
+
+    <div class="doc-badge" id="doc-badge">
+      ✅ <span id="doc-name"></span>
+    </div>
+
+    <!-- Mode Toggle -->
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="doc-mode-btn" onclick="setMode('doc')">
+        📄 Document Mode
+      </button>
+      <button class="mode-btn" id="general-mode-btn" onclick="setMode('general')">
+        💬 General Chat
+      </button>
+    </div>
+
+    <div class="mode-hint doc" id="mode-hint">
+      Answers only from your uploaded PDF
+    </div>
+
     <textarea
       class="question-input"
       id="question-input"
-      placeholder="What is this document about? What are the main topics?"
+      placeholder="What is this document about?"
     ></textarea>
-    <button class="btn" id="ask-btn">Ask Gemini</button>
+
+    <button class="btn" id="ask-btn">Ask</button>
 
     <div class="answer-box" id="answer-box">
       <h3>Answer</h3>
+      <div class="mode-label doc" id="mode-label">📄 Document</div>
       <div class="answer-text" id="answer-text"></div>
       <div class="sources-tag" id="sources-tag"></div>
     </div>
@@ -278,6 +340,7 @@
     const API = "http://127.0.0.1:8000";
     let currentDocId = null;
     let currentFilename = null;
+    let currentMode = "doc";
     let qaHistory = [];
 
     const fileInput = document.getElementById("file-input");
@@ -292,7 +355,30 @@
     const answerText = document.getElementById("answer-text");
     const sourcesTag = document.getElementById("sources-tag");
     const docName = document.getElementById("doc-name");
-    const history = document.getElementById("history");
+    const historyEl = document.getElementById("history");
+    const modeHint = document.getElementById("mode-hint");
+    const modeLabel = document.getElementById("mode-label");
+
+    function setMode(mode) {
+      currentMode = mode;
+
+      document.getElementById("doc-mode-btn").classList.toggle("active", mode === "doc");
+      document.getElementById("general-mode-btn").classList.toggle("active", mode === "general");
+
+      if (mode === "doc") {
+        modeHint.textContent = "Answers only from your uploaded PDF";
+        modeHint.className = "mode-hint doc";
+        questionInput.placeholder = "What is this document about?";
+        askBtn.style.background = "#4f8ef7";
+      } else {
+        modeHint.textContent = "Ask any follow-up or general question freely";
+        modeHint.className = "mode-hint general";
+        questionInput.placeholder = "Can I build this project in VS Code?";
+        askBtn.style.background = "#a855f7";
+      }
+
+      answerBox.style.display = "none";
+    }
 
     // Drag and drop
     uploadArea.addEventListener("dragover", e => {
@@ -342,7 +428,6 @@
         });
 
         const data = await res.json();
-
         if (!res.ok) throw new Error(data.detail || "Upload failed");
 
         currentDocId = data.doc_id;
@@ -365,28 +450,50 @@
     // Ask question
     askBtn.addEventListener("click", async () => {
       const question = questionInput.value.trim();
-      if (!question || !currentDocId) return;
+      if (!question) return;
 
       askBtn.disabled = true;
-      askBtn.innerHTML = `<span class="spinner"></span> Searching...`;
+      askBtn.innerHTML = `<span class="spinner"></span> Thinking...`;
       answerBox.style.display = "none";
 
       try {
-        const res = await fetch(`${API}/ask`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ doc_id: currentDocId, question })
-        });
+        let data;
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || "Search failed");
+        if (currentMode === "doc") {
+          const res = await fetch(`${API}/ask`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ doc_id: currentDocId, question })
+          });
+          data = await res.json();
+          if (!res.ok) throw new Error(data.detail || "Search failed");
+
+          modeLabel.textContent = "📄 Document";
+          modeLabel.className = "mode-label doc";
+          sourcesTag.textContent = `Based on ${data.sources_used} relevant sections from the document`;
+
+        } else {
+          const res = await fetch(`${API}/general-ask`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question })
+          });
+          data = await res.json();
+          if (!res.ok) throw new Error(data.detail || "Request failed");
+
+          modeLabel.textContent = "💬 General Chat";
+          modeLabel.className = "mode-label general";
+          sourcesTag.textContent = "Answered from general knowledge";
+        }
 
         answerText.textContent = data.answer;
-        sourcesTag.textContent = `Based on ${data.sources_used} relevant sections from the document`;
         answerBox.style.display = "block";
 
-        // Add to history
-        qaHistory.unshift({ q: question, a: data.answer });
+        qaHistory.unshift({
+          q: question,
+          a: data.answer,
+          mode: currentMode
+        });
         renderHistory();
 
         questionInput.value = "";
@@ -396,11 +503,10 @@
         answerBox.style.display = "block";
       } finally {
         askBtn.disabled = false;
-        askBtn.textContent = "Ask Gemini";
+        askBtn.textContent = "Ask";
       }
     });
 
-    // Ask on Enter key
     questionInput.addEventListener("keydown", e => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
@@ -410,9 +516,9 @@
 
     function renderHistory() {
       if (qaHistory.length <= 1) return;
-      history.innerHTML = qaHistory.slice(1).map(item => `
+      historyEl.innerHTML = qaHistory.slice(1).map(item => `
         <div class="history-item">
-          <div class="q">Q: ${item.q}</div>
+          <div class="q">${item.mode === "doc" ? "📄" : "💬"} ${item.q}</div>
           <div class="a">${item.a}</div>
         </div>
       `).join("");
