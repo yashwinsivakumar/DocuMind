@@ -4,10 +4,51 @@ import chromadb
 from google import genai
 from dotenv import load_dotenv
 
+try:
+    import easyocr
+except ImportError:
+    easyocr = None
+
 load_dotenv()
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 chroma_client = chromadb.PersistentClient(path="./chroma_db")
+
+# Initialize OCR reader (lazy load on first use)
+_ocr_reader = None
+
+def get_ocr_reader():
+    if easyocr is None:
+        raise RuntimeError(
+            "OCR support requires easyocr. Install it with: pip install easyocr"
+        )
+
+    global _ocr_reader
+    if _ocr_reader is None:
+        try:
+            print("  Initializing OCR reader...")
+            _ocr_reader = easyocr.Reader(['en'])
+        except Exception as e:
+            print(f"  Warning: OCR initialization failed: {e}")
+            return None
+    return _ocr_reader
+def extract_text_with_ocr(page) -> str:
+    """Extract text from a PDF page using OCR."""
+    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+    img_data = pix.tobytes("png")
+    
+    import tempfile
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+        tmp.write(img_data)
+        tmp_path = tmp.name
+    
+    try:
+        reader = get_ocr_reader()
+        results = reader.readtext(tmp_path)
+        text = "\n".join([result[1] for result in results])
+        return text
+    finally:
+        os.remove(tmp_path)
 
 
 def extract_text_from_pdf(pdf_path: str) -> str:
@@ -16,9 +57,18 @@ def extract_text_from_pdf(pdf_path: str) -> str:
 
     doc = fitz.open(pdf_path)
     all_text = []
+    ocr_used = False
 
     for page_num, page in enumerate(doc):
+        # Try to extract text directly first
         text = page.get_text()
+        
+        # If no text, fall back to OCR
+        if not text.strip():
+            print(f"  Page {page_num + 1}: No extractable text, attempting OCR...")
+            text = extract_text_with_ocr(page)
+            ocr_used = True
+        
         if text.strip():
             all_text.append(f"[Page {page_num + 1}]\n{text}")
 
@@ -27,7 +77,12 @@ def extract_text_from_pdf(pdf_path: str) -> str:
     full_text = "\n\n".join(all_text)
 
     if not full_text.strip():
-        raise ValueError("No text could be extracted. PDF may be scanned/image-based.")
+        raise ValueError(
+            "No text could be extracted from any pages in the PDF."
+        )
+    
+    if ocr_used:
+        print("  ✓ OCR processing completed")
 
     return full_text
 

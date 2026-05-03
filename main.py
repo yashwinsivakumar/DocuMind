@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 
 from ingest import ingest_pdf
-from search import search_and_answer
+from search import search_and_answer, search_and_answer_multi
 
 load_dotenv()
 
@@ -27,6 +27,11 @@ documents = {}
 
 class AskRequest(BaseModel):
     doc_id: str
+    question: str
+
+
+class AskMultiRequest(BaseModel):
+    doc_ids: list[str]
     question: str
 
 
@@ -90,6 +95,33 @@ async def ask_question(request: AskRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
+
+@app.post("/ask-multi")
+async def ask_question_multi(request: AskMultiRequest):
+    """
+    Accepts multiple doc_ids and a question,
+    searches across all documents and returns an aggregated answer.
+    """
+    if not request.question.strip():
+        raise HTTPException(status_code=400, detail="Question cannot be empty.")
+    
+    if not request.doc_ids:
+        raise HTTPException(status_code=400, detail="At least one document ID is required.")
+
+    try:
+        result = search_and_answer_multi(request.doc_ids, request.question)
+
+        return {
+            "doc_ids": result["doc_ids"],
+            "question": result["question"],
+            "answer": result["answer"],
+            "total_chunks_searched": result["chunk_count"],
+            "source_chunks": result["source_chunks"]
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Multi-document search failed: {str(e)}")
 
 
 @app.get("/documents")

@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DocuMind</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    .logo {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 6px;
+      letter-spacing: -1px;
+    }
+
+    .logo span { color: #4f8ef7; }
+
+    .tagline {
+      font-size: 0.95rem;
+      color: #666;
+      margin-bottom: 40px;
+    }
+
+    .card {
+      background: #1a1d27;
+      border: 1px solid #2a2d3a;
+      border-radius: 16px;
+      padding: 32px;
+      width: 100%;
+      max-width: 680px;
+      margin-bottom: 24px;
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 20px;
+    }
+
+    .upload-area {
+      border: 2px dashed #2a2d3a;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .upload-area:hover, .upload-area.dragover {
+      border-color: #4f8ef7;
+      background: #1e2236;
+    }
+
+    .upload-area input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .upload-icon { font-size: 2.5rem; margin-bottom: 12px; }
+
+    .upload-area p { color: #555; font-size: 0.95rem; }
+
+    .upload-area p span { color: #4f8ef7; font-weight: 600; }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: #4f8ef7;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 16px;
+      transition: background 0.2s;
+    }
+
+    .btn:hover { background: #3a7be0; }
+    .btn:disabled { background: #2a2d3a; color: #555; cursor: not-allowed; }
+
+    .status {
+      margin-top: 14px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .status.success {
+      background: #0f2a1a;
+      border: 1px solid #1a5c35;
+      color: #4caf82;
+      display: block;
+    }
+
+    .status.error {
+      background: #2a0f0f;
+      border: 1px solid #5c1a1a;
+      color: #e06464;
+      display: block;
+    }
+
+    .status.loading {
+      background: #1a1f2e;
+      border: 1px solid #2a3050;
+      color: #4f8ef7;
+      display: block;
+    }
+
+    #ask-section { display: none; }
+
+    .doc-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #0f2a1a;
+      border: 1px solid #1a5c35;
+      color: #4caf82;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+    }
+
+    .doc-list {
+      background: #0f1117;
+      border: 1px solid #2a2d3a;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 20px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .doc-list-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-size: 0.9rem;
+    }
+
+    .doc-list-item:hover {
+      background: #1a1d27;
+    }
+
+    .doc-list-item input[type="checkbox"] {
+      cursor: pointer;
+      width: 16px;
+      height: 16px;
+    }
+
+    .doc-list-label {
+      flex: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .doc-count {
+      font-size: 0.75rem;
+      color: #555;
+      padding: 2px 6px;
+      background: #2a2d3a;
+      border-radius: 4px;
+    }
+
+    /* Mode toggle */
+    .mode-toggle {
+      display: flex;
+      background: #0f1117;
+      border: 1px solid #2a2d3a;
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 20px;
+      gap: 4px;
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: transparent;
+      color: #555;
+      white-space: nowrap;
+    }
+
+    .mode-btn.active {
+      background: #4f8ef7;
+      color: white;
+    }
+
+    .mode-hint {
+      font-size: 0.8rem;
+      color: #444;
+      margin-bottom: 14px;
+      padding: 8px 12px;
+      background: #0f1117;
+      border-radius: 8px;
+      border-left: 3px solid #2a2d3a;
+    }
+
+    .mode-hint.doc { border-left-color: #4f8ef7; }
+    .mode-hint.general { border-left-color: #a855f7; }
+
+    .question-input {
+      width: 100%;
+      background: #0f1117;
+      border: 1px solid #2a2d3a;
+      border-radius: 10px;
+      padding: 14px 16px;
+      color: #e0e0e0;
+      font-size: 1rem;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      transition: border 0.2s;
+      min-height: 80px;
+    }
+
+    .question-input:focus { border-color: #4f8ef7; }
+
+    .answer-box {
+      margin-top: 24px;
+      display: none;
+    }
+
+    .answer-box h3 {
+      font-size: 0.85rem;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+
+    .answer-text {
+      background: #0f1117;
+      border: 1px solid #2a2d3a;
+      border-radius: 10px;
+      padding: 20px;
+      font-size: 0.95rem;
+      line-height: 1.7;
+      color: #d0d0d0;
+      white-space: pre-wrap;
+    }
+
+    .mode-label {
+      display: inline-block;
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+
+    .mode-label.doc {
+      background: #1a2a4a;
+      color: #4f8ef7;
+    }
+
+    .mode-label.general {
+      background: #2a1a4a;
+      color: #a855f7;
+    }
+
+    .sources-tag { margin-top: 10px; font-size: 0.8rem; color: #444; }
+
+    .history { margin-top: 24px; }
+
+    .history-item {
+      border-top: 1px solid #2a2d3a;
+      padding: 16px 0;
+    }
+
+    .history-item .q {
+      font-size: 0.85rem;
+      color: #4f8ef7;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .history-item .a { font-size: 0.9rem; color: #aaa; line-height: 1.6; }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #4f8ef7;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Enhanced Animations */
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(79, 142, 247, 0.7); }
+      50% { box-shadow: 0 0 0 10px rgba(79, 142, 247, 0); }
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes typewriter {
+      from { width: 0; }
+      to { width: 100%; }
+    }
+
+    /* Progress Bar */
+    .progress-bar-container {
+      width: 100%;
+      height: 4px;
+      background: #2a2d3a;
+      border-radius: 4px;
+      margin: 10px 0;
+      overflow: hidden;
+      display: none;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #4f8ef7, #a855f7);
+      width: 0%;
+      transition: width 0.3s ease;
+      border-radius: 4px;
+    }
+
+    .progress-bar.active {
+      animation: pulse 1.5s infinite;
+    }
+
+    /* Toast Notifications */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toast {
+      padding: 14px 18px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      animation: slideIn 0.3s ease;
+      max-width: 350px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toast.success {
+      background: #0f2a1a;
+      border-left: 4px solid #4caf82;
+      color: #4caf82;
+    }
+
+    .toast.error {
+      background: #2a0f0f;
+      border-left: 4px solid #e06464;
+      color: #e06464;
+    }
+
+    .toast.info {
+      background: #0f1a2a;
+      border-left: 4px solid #4f8ef7;
+      color: #4f8ef7;
+    }
+
+    .toast-icon {
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    /* Enhanced Button Effects */
+    .btn {
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .btn:not(:disabled):hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(79, 142, 247, 0.4);
+    }
+
+    .btn:not(:disabled):active {
+      transform: translateY(0);
+    }
+
+    .btn.processing {
+      animation: glow 2s infinite;
+    }
+
+    /* Document Counter */
+    .doc-counter {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #4f8ef7;
+      color: white;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: bold;
+      animation: slideIn 0.3s ease;
+    }
+
+    /* Enhanced Card Animations */
+    .card {
+      animation: fadeInUp 0.5s ease;
+    }
+
+    .answer-box {
+      animation: slideIn 0.4s ease;
+    }
+
+    /* Mode Toggle Enhancement */
+    .mode-toggle {
+      animation: slideIn 0.4s ease;
+    }
+
+    .mode-btn {
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .mode-btn.active {
+      transform: scale(1.05);
+    }
+
+    /* Loading Pulse */
+    .loading-pulse {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    /* Document List Enhancement */
+    .doc-list-item {
+      animation: fadeInUp 0.3s ease;
+    }
+
+    /* Smooth Status Transitions */
+    .status {
+      animation: slideIn 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="logo">Docu<span>Mind</span></div>
+  <p class="tagline">Upload a PDF. Ask anything about it.</p>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Upload Card -->
+  <div class="card">
+    <h2>📄 Upload Document</h2>
+    <div class="doc-counter" id="doc-counter" style="display:none;">0</div>
+    <div class="upload-area" id="upload-area">
+      <input type="file" id="file-input" accept=".pdf" />
+      <div class="upload-icon">📂</div>
+      <p><span>Click to upload</span> or drag and drop</p>
+      <p style="margin-top:6px; font-size:0.8rem;">PDF files only</p>
+    </div>
+    <div id="file-name" style="margin-top:12px; font-size:0.85rem; color:#555;"></div>
+    <div class="progress-bar-container" id="progress-container">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <button class="btn" id="upload-btn" disabled>Upload & Index</button>
+  </div>
+
+  <!-- Ask Card -->
+  <div class="card" id="ask-section">
+    <h2>💬 Ask a Question</h2>
+
+    <div class="doc-badge" id="doc-badge" style="display:none;">
+      ✅ <span id="doc-name"></span>
+    </div>
+
+    <!-- Mode Toggle -->
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="single-mode-btn" onclick="setMode('single')">
+        📄 Single
+      </button>
+      <button class="mode-btn" id="multi-mode-btn" onclick="setMode('multi')">
+        📚 Multi
+      </button>
+      <button class="mode-btn" id="general-mode-btn" onclick="setMode('general')">
+        💬 General
+      </button>
+    </div>
+
+    <!-- Document List for Multi-Doc Mode -->
+    <div class="doc-list" id="doc-list" style="display:none;">
+      <div id="doc-list-items"></div>
+    </div>
+
+    <div class="mode-hint doc" id="mode-hint">
+      Answers only from your uploaded PDF
+    </div>
+
+    <textarea
+      class="question-input"
+      id="question-input"
+      placeholder="What is this document about?"
+    ></textarea>
+
+    <button class="btn" id="ask-btn">Ask</button>
+
+    <div class="answer-box" id="answer-box">
+      <h3>Answer</h3>
+      <div class="mode-label doc" id="mode-label">📄 Document</div>
+      <div class="answer-text" id="answer-text"></div>
+      <div class="sources-tag" id="sources-tag"></div>
+    </div>
+
+    <div class="history" id="history"></div>
+  </div>
+
+  <script>
+    const API = "http://127.0.0.1:8000";
+    let currentDocId = null;
+    let currentFilename = null;
+    let currentMode = "single";
+    let allDocuments = {};
+    let selectedDocIds = [];
+    let qaHistory = [];
+
+    // Enhanced UI References
+    const fileInput = document.getElementById("file-input");
+    const uploadArea = document.getElementById("upload-area");
+    const uploadBtn = document.getElementById("upload-btn");
+    const fileNameEl = document.getElementById("file-name");
+    const askSection = document.getElementById("ask-section");
+    const questionInput = document.getElementById("question-input");
+    const askBtn = document.getElementById("ask-btn");
+    const answerBox = document.getElementById("answer-box");
+    const answerText = document.getElementById("answer-text");
+    const sourcesTag = document.getElementById("sources-tag");
+    const docName = document.getElementById("doc-name");
+    const docBadge = document.getElementById("doc-badge");
+    const docList = document.getElementById("doc-list");
+    const docListItems = document.getElementById("doc-list-items");
+    const historyEl = document.getElementById("history");
+    const modeHint = document.getElementById("mode-hint");
+    const modeLabel = document.getElementById("mode-label");
+    const toastContainer = document.getElementById("toast-container");
+    const progressContainer = document.getElementById("progress-container");
+    const progressBar = document.getElementById("progress-bar");
+    const docCounter = document.getElementById("doc-counter");
+
+    // Toast Notification System
+    function showToast(message, type = "info", duration = 3000) {
+      const icons = { success: "✅", error: "❌", info: "ℹ️" };
+      const toast = document.createElement("div");
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `<span class="toast-icon">${icons[type]}</span>${message}`;
+      toastContainer.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.animation = "slideIn 0.3s reverse ease";
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+    }
+
+    // Progress Bar Management
+    function updateProgress(percent) {
+      progressBar.style.width = percent + "%";
+      if (percent > 0 && percent < 100) {
+        progressContainer.style.display = "block";
+      } else if (percent === 100) {
+        setTimeout(() => {
+          progressContainer.style.display = "none";
+          progressBar.style.width = "0%";
+        }, 500);
+      }
+    }
+
+    // Document Counter Update
+    function updateDocCounter() {
+      const count = Object.keys(allDocuments).length;
+      docCounter.textContent = count;
+      docCounter.style.display = count > 0 ? "flex" : "none";
+    }
+
+    // Typewriter Effect for Answers
+    function typewriterEffect(element, text, speed = 10) {
+      element.textContent = "";
+      let index = 0;
+      
+      function type() {
+        if (index < text.length) {
+          element.textContent += text.charAt(index);
+          index++;
+          setTimeout(type, speed);
+        }
+      }
+      type();
+    }
+
+    // Mode Selection
+    function setMode(mode) {
+      currentMode = mode;
+      document.getElementById("single-mode-btn").classList.toggle("active", mode === "single");
+      document.getElementById("multi-mode-btn").classList.toggle("active", mode === "multi");
+      document.getElementById("general-mode-btn").classList.toggle("active", mode === "general");
+
+      docBadge.style.display = mode === "single" ? "inline-flex" : "none";
+      docList.style.display = mode === "multi" ? "block" : "none";
+
+      const configs = {
+        single: {
+          hint: "Answers only from your selected PDF",
+          placeholder: "What is this document about?",
+          color: "#4f8ef7"
+        },
+        multi: {
+          hint: "Search across multiple documents simultaneously",
+          placeholder: "Search across all selected documents...",
+          color: "#4f8ef7"
+        },
+        general: {
+          hint: "Ask any follow-up or general question freely",
+          placeholder: "Can I build this project in VS Code?",
+          color: "#a855f7"
+        }
+      };
+
+      const config = configs[mode];
+      modeHint.textContent = config.hint;
+      modeHint.className = `mode-hint ${mode === "general" ? "general" : "doc"}`;
+      questionInput.placeholder = config.placeholder;
+      askBtn.style.background = config.color;
+      answerBox.style.display = "none";
+    }
+
+    function updateDocumentList() {
+      docListItems.innerHTML = Object.entries(allDocuments).map(([id, name]) => `
+        <label class="doc-list-item">
+          <input type="checkbox" data-doc-id="${id}" ${selectedDocIds.includes(id) ? "checked" : ""} 
+                 onchange="toggleDocSelection(this)">
+          <span class="doc-list-label">${name}</span>
+        </label>
+      `).join("");
+    }
+
+    function toggleDocSelection(checkbox) {
+      const docId = checkbox.dataset.docId;
+      if (checkbox.checked) {
+        if (!selectedDocIds.includes(docId)) selectedDocIds.push(docId);
+      } else {
+        selectedDocIds = selectedDocIds.filter(id => id !== docId);
+      }
+    }
+
+    // Upload Area Events
+    uploadArea.addEventListener("dragover", e => {
+      e.preventDefault();
+      uploadArea.classList.add("dragover");
+    });
+
+    uploadArea.addEventListener("dragleave", () => {
+      uploadArea.classList.remove("dragover");
+    });
+
+    uploadArea.addEventListener("drop", e => {
+      e.preventDefault();
+      uploadArea.classList.remove("dragover");
+      const file = e.dataTransfer.files[0];
+      if (file && file.name.endsWith(".pdf")) {
+        fileInput.files = e.dataTransfer.files;
+        handleFileSelect(file);
+      }
+    });
+
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files[0]) handleFileSelect(fileInput.files[0]);
+    });
+
+    function handleFileSelect(file) {
+      fileNameEl.textContent = `Selected: ${file.name}`;
+      uploadBtn.disabled = false;
+      uploadBtn.classList.add("processing");
+    }
+
+    // Upload PDF with Progress
+    uploadBtn.addEventListener("click", async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      uploadBtn.disabled = true;
+      uploadBtn.classList.add("processing");
+      updateProgress(10);
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        updateProgress(30);
+        showToast(`Uploading ${file.name}...`, "info", 5000);
+
+        const res = await fetch(`${API}/upload`, {
+          method: "POST",
+          body: formData
+        });
+
+        updateProgress(70);
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Upload failed");
+
+        currentDocId = data.doc_id;
+        currentFilename = data.filename;
+        allDocuments[data.doc_id] = data.filename;
+
+        if (!selectedDocIds.includes(data.doc_id)) {
+          selectedDocIds.push(data.doc_id);
+        }
+
+        updateProgress(100);
+        updateDocCounter();
+        updateDocumentList();
+
+        docName.textContent = data.filename;
+        askSection.style.display = "block";
+        askSection.scrollIntoView({ behavior: "smooth" });
+
+        showToast(`✨ Indexed ${data.chunks_stored} chunks from "${file.name}"`, "success");
+
+        // Reset
+        fileNameEl.textContent = "";
+        fileInput.value = "";
+        uploadBtn.disabled = false;
+        uploadBtn.classList.remove("processing");
+
+      } catch (err) {
+        updateProgress(0);
+        uploadBtn.disabled = false;
+        uploadBtn.classList.remove("processing");
+        showToast(`Upload failed: ${err.message}`, "error", 5000);
+      }
+    });
+
+    // Ask Question with Enhanced Feedback
+    askBtn.addEventListener("click", async () => {
+      const question = questionInput.value.trim();
+      if (!question) {
+        showToast("Please ask a question first", "info");
+        return;
+      }
+
+      if (currentMode === "multi" && selectedDocIds.length === 0) {
+        showToast("Select at least one document for multi-search", "error");
+        return;
+      }
+
+      askBtn.disabled = true;
+      askBtn.classList.add("processing");
+      askBtn.innerHTML = `<span class="spinner"></span> Thinking...`;
+      answerBox.style.display = "none";
+
+      try {
+        let data;
+        let endpoint = currentMode === "single" ? "/ask" : currentMode === "multi" ? "/ask-multi" : "/general-ask";
+        let payload = currentMode === "single" ? { doc_id: currentDocId, question }
+                    : currentMode === "multi" ? { doc_ids: selectedDocIds, question }
+                    : { question };
+
+        showToast("Searching...", "info", 10000);
+
+        const res = await fetch(`${API}${endpoint}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Search failed");
+
+        // Set mode label
+        if (currentMode === "single") {
+          modeLabel.textContent = "📄 Single Document";
+          sourcesTag.textContent = `Based on ${data.sources_used} relevant sections`;
+        } else if (currentMode === "multi") {
+          modeLabel.textContent = `📚 ${selectedDocIds.length} Documents`;
+          sourcesTag.textContent = `Based on ${data.total_chunks_searched} sections from ${selectedDocIds.length} docs`;
+        } else {
+          modeLabel.textContent = "💬 General Chat";
+          sourcesTag.textContent = "Answered from general knowledge";
+        }
+
+        answerBox.style.display = "block";
+        typewriterEffect(answerText, data.answer, 5);
+
+        qaHistory.unshift({ q: question, a: data.answer, mode: currentMode });
+        renderHistory();
+
+        questionInput.value = "";
+        showToast("Answer ready!", "success");
+
+      } catch (err) {
+        answerText.textContent = `Error: ${err.message}`;
+        answerBox.style.display = "block";
+        showToast(`Error: ${err.message}`, "error");
+      } finally {
+        askBtn.disabled = false;
+        askBtn.classList.remove("processing");
+        askBtn.textContent = "Ask";
+      }
+    });
+
+    questionInput.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        askBtn.click();
+      }
+    });
+
+    function renderHistory() {
+      if (qaHistory.length <= 1) return;
+      historyEl.innerHTML = qaHistory.slice(1).map(item => {
+        const icon = item.mode === "single" ? "📄" : item.mode === "multi" ? "📚" : "💬";
+        return `
+          <div class="history-item">
+            <div class="q">${icon} ${item.q}</div>
+            <div class="a">${item.a}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // Initial Setup
+    showToast("Welcome to DocuMind! 🚀", "success", 2000);
+  </script>
+</body>
+</html>

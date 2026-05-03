@@ -1,352 +1,640 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DocuMind</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DOCUMIND - AI Document Search</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #0f1117;
-      color: #e0e0e0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: radial-gradient(circle at top, #173b73 0%, #0d1730 42%, #081122 100%);
+      color: #dce9ff;
       min-height: 100vh;
       display: flex;
-      flex-direction: column;
+      justify-content: center;
       align-items: center;
       padding: 40px 20px;
+      overflow-x: hidden;
     }
 
-    .logo {
-      font-size: 2rem;
-      font-weight: 700;
-      color: #ffffff;
-      margin-bottom: 6px;
-      letter-spacing: -1px;
-    }
-
-    .logo span { color: #4f8ef7; }
-
-    .tagline {
-      font-size: 0.95rem;
-      color: #666;
-      margin-bottom: 40px;
-    }
-
-    .card {
-      background: #1a1d27;
-      border: 1px solid #2a2d3a;
-      border-radius: 16px;
-      padding: 32px;
+    .container {
+      max-width: 1100px;
       width: 100%;
-      max-width: 680px;
-      margin-bottom: 24px;
+      animation: fadeInScale 0.6s ease;
     }
 
-    .card h2 {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #aaa;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 20px;
+    @keyframes fadeInScale {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
     }
 
-    .upload-area {
-      border: 2px dashed #2a2d3a;
-      border-radius: 12px;
+    header {
+      text-align: center;
+      margin-bottom: 50px;
+      animation: slideDown 0.7s ease;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    h1 {
+      font-size: 3.5em;
+      font-weight: 700;
+      background: linear-gradient(135deg, #8cc7ff 0%, #4ea1ff 50%, #1d74ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+      letter-spacing: -1px;
+      font-family: 'Space Mono', monospace;
+    }
+
+    .subtitle {
+      font-size: 1.1em;
+      color: #b5c7e6;
+      font-weight: 300;
+      letter-spacing: 0.5px;
+    }
+
+    .upload-card {
+      background: linear-gradient(180deg, rgba(14, 27, 56, 0.92) 0%, rgba(10, 18, 38, 0.94) 100%);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(77, 145, 255, 0.16);
+      border-radius: 20px;
       padding: 40px;
+      margin-bottom: 35px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.32);
+      animation: slideUp 0.7s ease 0.1s both;
+      position: relative;
+      overflow: hidden;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .upload-card::before {
+      content: '';
+      position: absolute;
+      inset: auto -90px -90px auto;
+      width: 180px;
+      height: 180px;
+      background: radial-gradient(circle, rgba(77, 145, 255, 0.18) 0%, transparent 68%);
+      animation: float 6s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(30px, -30px); }
+    }
+
+    #upload-area {
+      border: 2px dashed rgba(77, 145, 255, 0.35);
+      border-radius: 16px;
+      padding: 50px 30px;
       text-align: center;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      background: linear-gradient(135deg, rgba(18, 37, 74, 0.72) 0%, rgba(11, 26, 55, 0.9) 100%);
       position: relative;
+      z-index: 1;
     }
 
-    .upload-area:hover, .upload-area.dragover {
-      border-color: #4f8ef7;
-      background: #1e2236;
+    #upload-area:hover {
+      border-color: rgba(77, 145, 255, 0.7);
+      background: linear-gradient(135deg, rgba(20, 44, 88, 0.9) 0%, rgba(14, 31, 66, 0.98) 100%);
+      transform: translateY(-4px);
     }
 
-    .upload-area input[type="file"] {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      cursor: pointer;
+    #upload-area.dragover {
+      border-color: rgba(77, 145, 255, 0.95);
+      background: linear-gradient(135deg, rgba(24, 53, 104, 0.95) 0%, rgba(13, 32, 67, 1) 100%);
+      transform: scale(1.02) translateY(-4px);
     }
 
-    .upload-icon { font-size: 2.5rem; margin-bottom: 12px; }
-
-    .upload-area p { color: #555; font-size: 0.95rem; }
-
-    .upload-area p span { color: #4f8ef7; font-weight: 600; }
-
-    .btn {
-      width: 100%;
-      padding: 14px;
-      background: #4f8ef7;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 16px;
-      transition: background 0.2s;
+    #upload-area p {
+      color: #bdd0ea;
+      margin-bottom: 12px;
+      font-size: 1em;
+      font-weight: 500;
     }
 
-    .btn:hover { background: #3a7be0; }
-    .btn:disabled { background: #2a2d3a; color: #555; cursor: not-allowed; }
+    #upload-area .upload-icon {
+      font-size: 3em;
+      margin-bottom: 12px;
+      animation: bounce 2s ease-in-out infinite;
+    }
 
-    .status {
-      margin-top: 14px;
-      padding: 12px 16px;
-      border-radius: 8px;
-      font-size: 0.9rem;
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    #file-input {
       display: none;
     }
 
-    .status.success {
-      background: #0f2a1a;
-      border: 1px solid #1a5c35;
-      color: #4caf82;
-      display: block;
+    .file-name {
+      color: #6fb2ff;
+      font-weight: 600;
+      margin-top: 12px;
+      font-size: 0.95em;
+      animation: fadeIn 0.4s ease;
     }
 
-    .status.error {
-      background: #2a0f0f;
-      border: 1px solid #5c1a1a;
-      color: #e06464;
-      display: block;
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
-    .status.loading {
-      background: #1a1f2e;
-      border: 1px solid #2a3050;
-      color: #4f8ef7;
-      display: block;
+    #upload-btn {
+      background: linear-gradient(135deg, #2f78ff 0%, #1858d6 100%);
+      color: white;
+      border: none;
+      padding: 14px 35px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 1em;
+      font-weight: 600;
+      margin-top: 18px;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 15px rgba(49, 116, 255, 0.28);
     }
 
-    #ask-section { display: none; }
-
-    .doc-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: #0f2a1a;
-      border: 1px solid #1a5c35;
-      color: #4caf82;
-      padding: 8px 14px;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      margin-bottom: 20px;
+    #upload-btn:hover:not(:disabled) {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 24px rgba(49, 116, 255, 0.38);
     }
 
-    /* Mode toggle */
-    .mode-toggle {
+    #upload-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #upload-btn.processing {
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { box-shadow: 0 8px 24px rgba(47, 120, 255, 0.42); }
+      50% { box-shadow: 0 8px 24px rgba(47, 120, 255, 0.56); }
+      100% { box-shadow: 0 8px 24px rgba(47, 120, 255, 0.42); }
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 6px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    #ask-section {
+      display: none;
+      background: linear-gradient(180deg, rgba(14, 27, 56, 0.92) 0%, rgba(10, 18, 38, 0.95) 100%);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(77, 145, 255, 0.16);
+      border-radius: 20px;
+      padding: 40px;
+      margin-bottom: 35px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.32);
+      animation: slideUp 0.7s ease both;
+    }
+
+    .mode-buttons {
       display: flex;
-      background: #0f1117;
-      border: 1px solid #2a2d3a;
-      border-radius: 10px;
-      padding: 4px;
-      margin-bottom: 20px;
-      gap: 4px;
+      gap: 12px;
+      margin-bottom: 28px;
+      justify-content: center;
+      flex-wrap: wrap;
     }
 
     .mode-btn {
       flex: 1;
-      padding: 10px;
-      border: none;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      font-weight: 600;
+      min-width: 120px;
+      max-width: 160px;
+      padding: 12px 18px;
+      border: 2px solid rgba(77, 145, 255, 0.18);
+      background: rgba(10, 24, 50, 0.9);
+      border-radius: 12px;
       cursor: pointer;
-      transition: all 0.2s;
-      background: transparent;
-      color: #555;
+      font-weight: 600;
+      color: #b9cbed;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      font-size: 0.95em;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
     }
 
     .mode-btn.active {
-      background: #4f8ef7;
-      color: white;
+      border-color: rgba(77, 145, 255, 0.85);
+      background: linear-gradient(135deg, rgba(24, 53, 104, 0.95) 0%, rgba(15, 37, 78, 1) 100%);
+      color: #8cc7ff;
+      transform: scale(1.08) translateY(-2px);
+      box-shadow: 0 8px 20px rgba(47, 120, 255, 0.28);
+    }
+
+    .mode-btn:hover {
+      border-color: rgba(77, 145, 255, 0.55);
+      background: rgba(20, 44, 88, 0.95);
     }
 
     .mode-hint {
-      font-size: 0.8rem;
-      color: #444;
-      margin-bottom: 14px;
-      padding: 8px 12px;
-      background: #0f1117;
-      border-radius: 8px;
-      border-left: 3px solid #2a2d3a;
+      text-align: center;
+      font-size: 0.95em;
+      color: #d5e3f8;
+      margin-bottom: 20px;
+      padding: 14px 16px;
+      background: rgba(16, 34, 68, 0.9);
+      border-radius: 10px;
+      border-left: 3px solid #4f8ef7;
+      font-weight: 500;
+      animation: fadeIn 0.4s ease;
     }
 
-    .mode-hint.doc { border-left-color: #4f8ef7; }
-    .mode-hint.general { border-left-color: #a855f7; }
+    .mode-hint.general {
+      border-left-color: #4f8ef7;
+    }
+
+    .doc-selector {
+      background: rgba(15, 31, 63, 0.95);
+      padding: 18px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      display: none;
+      border: 1px solid rgba(77, 145, 255, 0.16);
+    }
+
+    .doc-list-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 0;
+      cursor: pointer;
+      font-size: 0.95em;
+      color: #d5e3f8;
+      transition: all 0.3s ease;
+    }
+
+    .doc-list-item:hover {
+      color: #8cc7ff;
+      transform: translateX(4px);
+    }
+
+    .doc-list-item input {
+      margin-right: 12px;
+      cursor: pointer;
+      width: 18px;
+      height: 18px;
+      accent-color: #4f8ef7;
+    }
 
     .question-input {
       width: 100%;
-      background: #0f1117;
-      border: 1px solid #2a2d3a;
-      border-radius: 10px;
-      padding: 14px 16px;
-      color: #e0e0e0;
-      font-size: 1rem;
-      font-family: inherit;
-      resize: none;
+      padding: 14px 18px;
+      border: 2px solid rgba(77, 145, 255, 0.22);
+      border-radius: 12px;
+      font-size: 1em;
+      margin-bottom: 18px;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.4s ease;
+      resize: vertical;
+      min-height: 100px;
+      background: rgba(11, 24, 49, 0.95);
+      color: #e2e8f0;
+    }
+
+    .question-input::placeholder {
+      color: #7f93b2;
+    }
+
+    .question-input:focus {
       outline: none;
-      transition: border 0.2s;
-      min-height: 80px;
+      border-color: #4f8ef7;
+      background: rgba(11, 24, 49, 1);
+      box-shadow: 0 0 0 4px rgba(79, 142, 247, 0.14);
     }
 
-    .question-input:focus { border-color: #4f8ef7; }
-
-    .answer-box {
-      margin-top: 24px;
-      display: none;
-    }
-
-    .answer-box h3 {
-      font-size: 0.85rem;
-      color: #555;
+    #ask-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #4f8ef7 0%, #2f6fe8 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1em;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
       text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 12px;
+      letter-spacing: 0.5px;
+      box-shadow: 0 6px 18px rgba(79, 142, 247, 0.28);
     }
 
-    .answer-text {
-      background: #0f1117;
-      border: 1px solid #2a2d3a;
-      border-radius: 10px;
-      padding: 20px;
-      font-size: 0.95rem;
-      line-height: 1.7;
-      color: #d0d0d0;
-      white-space: pre-wrap;
+    #ask-btn:hover:not(:disabled) {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 24px rgba(79, 142, 247, 0.38);
+    }
+
+    #ask-btn.processing {
+      animation: shimmer 1.5s infinite;
+    }
+
+    #answer-box {
+      display: none;
+      background: linear-gradient(180deg, rgba(14, 27, 56, 0.95) 0%, rgba(10, 18, 38, 0.98) 100%);
+      border: 1px solid rgba(77, 145, 255, 0.18);
+      border-radius: 16px;
+      padding: 28px;
+      margin-top: 25px;
+      animation: slideUp 0.5s ease;
+      box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+    }
+
+    .answer-label {
+      font-size: 0.85em;
+      color: #99b1d3;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 8px;
+      font-weight: 600;
     }
 
     .mode-label {
-      display: inline-block;
-      font-size: 0.75rem;
-      padding: 3px 8px;
-      border-radius: 4px;
-      margin-bottom: 10px;
-      font-weight: 600;
-    }
-
-    .mode-label.doc {
-      background: #1a2a4a;
-      color: #4f8ef7;
+      font-weight: 700;
+      font-size: 1.1em;
+      background: linear-gradient(135deg, #8cc7ff 0%, #4f8ef7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: fadeIn 0.4s ease;
     }
 
     .mode-label.general {
-      background: #2a1a4a;
-      color: #a855f7;
+      background: linear-gradient(135deg, #8cc7ff 0%, #4f8ef7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
-    .sources-tag { margin-top: 10px; font-size: 0.8rem; color: #444; }
+    #answer-text {
+      font-size: 1.05em;
+      line-height: 1.7;
+      color: #e2e8f0;
+      margin-bottom: 18px;
+      font-weight: 400;
+      letter-spacing: 0.2px;
+    }
 
-    .history { margin-top: 24px; }
+    #sources-tag {
+      font-size: 0.85em;
+      color: #9cb4d7;
+      padding-top: 16px;
+      border-top: 1px solid rgba(77, 145, 255, 0.16);
+      text-align: right;
+      font-style: italic;
+    }
+
+    #history {
+      background: linear-gradient(180deg, rgba(14, 27, 56, 0.92) 0%, rgba(10, 18, 38, 0.95) 100%);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(77, 145, 255, 0.16);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+      animation: slideUp 0.7s ease 0.2s both;
+    }
+
+    .history-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      gap: 12px;
+    }
+
+    .history-title {
+      font-size: 1.05em;
+      font-weight: 700;
+      color: #8cc7ff;
+      letter-spacing: 0.3px;
+    }
+
+    .history-meta {
+      font-size: 0.85em;
+      color: #9cb4d7;
+    }
 
     .history-item {
-      border-top: 1px solid #2a2d3a;
-      padding: 16px 0;
+      padding: 16px;
+      background: rgba(15, 35, 72, 0.92);
+      border-radius: 12px;
+      margin-bottom: 12px;
+      border-left: 3px solid #4f8ef7;
+      transition: all 0.3s ease;
+    }
+
+    .history-item:hover {
+      background: rgba(21, 46, 92, 0.98);
+      transform: translateX(4px);
     }
 
     .history-item .q {
-      font-size: 0.85rem;
-      color: #4f8ef7;
-      margin-bottom: 6px;
-      font-weight: 600;
+      font-weight: 700;
+      color: #8cc7ff;
+      margin-bottom: 8px;
+      font-size: 0.95em;
     }
 
-    .history-item .a { font-size: 0.9rem; color: #aaa; line-height: 1.6; }
-
-    .spinner {
-      display: inline-block;
-      width: 14px;
-      height: 14px;
-      border: 2px solid #4f8ef7;
-      border-top-color: transparent;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      margin-right: 8px;
-      vertical-align: middle;
+    .history-item .a {
+      color: #d5e3f8;
+      font-size: 0.9em;
+      line-height: 1.6;
     }
 
-    @keyframes spin { to { transform: rotate(360deg); } }
+    /* Progress bar */
+    #progress-container {
+      display: none;
+      height: 3px;
+      background: rgba(79, 142, 247, 0.15);
+      border-radius: 2px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    #progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #4f8ef7 0%, #2f6fe8 100%);
+      width: 0%;
+      transition: width 0.3s ease;
+      animation: shimmer 1.5s infinite;
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 2.5em;
+      }
+
+      .upload-card, #ask-section, #history {
+        padding: 25px;
+      }
+
+      #upload-area {
+        padding: 35px 20px;
+      }
+
+      .mode-buttons {
+        gap: 8px;
+      }
+
+      .mode-btn {
+        min-width: 100px;
+        max-width: none;
+        flex: 1;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 20px 10px;
+      }
+
+      h1 {
+        font-size: 2em;
+      }
+
+      .subtitle {
+        font-size: 0.95em;
+      }
+
+      header {
+        margin-bottom: 30px;
+      }
+
+      .upload-card, #ask-section, #history {
+        padding: 20px;
+        margin-bottom: 20px;
+        border-radius: 16px;
+      }
+
+      #upload-area {
+        padding: 25px 15px;
+      }
+
+      .question-input {
+        min-height: 80px;
+      }
+
+      .history-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
   </style>
 </head>
 <body>
+  <div class="container">
+    <header>
+      <h1>📚 DOCUMIND</h1>
+      <p class="subtitle">AI-Powered Document Intelligence • Search • Analyze • Understand</p>
+    </header>
 
-  <div class="logo">Docu<span>Mind</span></div>
-  <p class="tagline">Upload a PDF. Ask anything about it.</p>
-
-  <!-- Upload Card -->
-  <div class="card">
-    <h2>📄 Upload Document</h2>
-    <div class="upload-area" id="upload-area">
-      <input type="file" id="file-input" accept=".pdf" />
-      <div class="upload-icon">📂</div>
-      <p><span>Click to upload</span> or drag and drop</p>
-      <p style="margin-top:6px; font-size:0.8rem;">PDF files only</p>
-    </div>
-    <div id="file-name" style="margin-top:12px; font-size:0.85rem; color:#555;"></div>
-    <button class="btn" id="upload-btn" disabled>Upload & Index</button>
-    <div class="status" id="upload-status"></div>
-  </div>
-
-  <!-- Ask Card -->
-  <div class="card" id="ask-section">
-    <h2>💬 Ask a Question</h2>
-
-    <div class="doc-badge" id="doc-badge">
-      ✅ <span id="doc-name"></span>
+    <div class="upload-card">
+      <div id="progress-container">
+        <div id="progress-bar"></div>
+      </div>
+      <div id="upload-area">
+        <div class="upload-icon">📄</div>
+        <p>Drop your PDF here or click to browse</p>
+        <input type="file" id="file-input" accept=".pdf">
+        <div class="file-name" id="file-name"></div>
+      </div>
+      <button id="upload-btn" disabled>Upload & Index</button>
     </div>
 
-    <!-- Mode Toggle -->
-    <div class="mode-toggle">
-      <button class="mode-btn active" id="doc-mode-btn" onclick="setMode('doc')">
-        📄 Document Mode
-      </button>
-      <button class="mode-btn" id="general-mode-btn" onclick="setMode('general')">
-        💬 General Chat
-      </button>
+    <div id="ask-section">
+      <div class="mode-buttons">
+        <button class="mode-btn active" id="single-mode-btn" onclick="setMode('single')">📄 Single</button>
+        <button class="mode-btn" id="multi-mode-btn" onclick="setMode('multi')">📚 Multi</button>
+        <button class="mode-btn" id="general-mode-btn" onclick="setMode('general')">💬 Chat</button>
+      </div>
+
+      <div class="mode-hint" id="mode-hint">Answers only from your selected PDF</div>
+
+      <div class="doc-selector" id="doc-list">
+        <div id="doc-list-items"></div>
+      </div>
+
+      <textarea class="question-input" id="question-input" placeholder="What is this document about?"></textarea>
+      <button id="ask-btn">Ask Now</button>
+
+      <div id="answer-box">
+        <div class="answer-label">Answer</div>
+        <div class="mode-label" id="mode-label">📄 Single Document</div>
+        <div id="answer-text"></div>
+        <div id="sources-tag"></div>
+      </div>
     </div>
 
-    <div class="mode-hint doc" id="mode-hint">
-      Answers only from your uploaded PDF
+    <div id="history">
+      <div class="history-header">
+        <div class="history-title">Recent History</div>
+        <div class="history-meta">Saved in your browser</div>
+      </div>
+      <div id="history-items"></div>
     </div>
-
-    <textarea
-      class="question-input"
-      id="question-input"
-      placeholder="What is this document about?"
-    ></textarea>
-
-    <button class="btn" id="ask-btn">Ask</button>
-
-    <div class="answer-box" id="answer-box">
-      <h3>Answer</h3>
-      <div class="mode-label doc" id="mode-label">📄 Document</div>
-      <div class="answer-text" id="answer-text"></div>
-      <div class="sources-tag" id="sources-tag"></div>
-    </div>
-
-    <div class="history" id="history"></div>
   </div>
 
   <script>
     const API = "http://127.0.0.1:8000";
+    const STORAGE_KEY = "documind_state_v1";
     let currentDocId = null;
     let currentFilename = null;
-    let currentMode = "doc";
+    let currentMode = "single";
+    let allDocuments = {};
+    let selectedDocIds = [];
     let qaHistory = [];
 
+    // Enhanced UI References
     const fileInput = document.getElementById("file-input");
     const uploadArea = document.getElementById("upload-area");
     const uploadBtn = document.getElementById("upload-btn");
-    const uploadStatus = document.getElementById("upload-status");
     const fileNameEl = document.getElementById("file-name");
     const askSection = document.getElementById("ask-section");
     const questionInput = document.getElementById("question-input");
@@ -354,33 +642,128 @@
     const answerBox = document.getElementById("answer-box");
     const answerText = document.getElementById("answer-text");
     const sourcesTag = document.getElementById("sources-tag");
-    const docName = document.getElementById("doc-name");
+    const docBadge = document.getElementById("doc-badge");
+    const docList = document.getElementById("doc-list");
+    const docListItems = document.getElementById("doc-list-items");
     const historyEl = document.getElementById("history");
+    const historyItemsEl = document.getElementById("history-items");
     const modeHint = document.getElementById("mode-hint");
     const modeLabel = document.getElementById("mode-label");
+    const progressContainer = document.getElementById("progress-container");
+    const progressBar = document.getElementById("progress-bar");
 
-    function setMode(mode) {
-      currentMode = mode;
-
-      document.getElementById("doc-mode-btn").classList.toggle("active", mode === "doc");
-      document.getElementById("general-mode-btn").classList.toggle("active", mode === "general");
-
-      if (mode === "doc") {
-        modeHint.textContent = "Answers only from your uploaded PDF";
-        modeHint.className = "mode-hint doc";
-        questionInput.placeholder = "What is this document about?";
-        askBtn.style.background = "#4f8ef7";
-      } else {
-        modeHint.textContent = "Ask any follow-up or general question freely";
-        modeHint.className = "mode-hint general";
-        questionInput.placeholder = "Can I build this project in VS Code?";
-        askBtn.style.background = "#a855f7";
-      }
-
-      answerBox.style.display = "none";
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        allDocuments,
+        selectedDocIds,
+        qaHistory,
+        currentDocId,
+        currentFilename,
+        currentMode
+      }));
     }
 
-    // Drag and drop
+    function loadState() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+
+      try {
+        const state = JSON.parse(raw);
+        allDocuments = state.allDocuments || {};
+        selectedDocIds = state.selectedDocIds || [];
+        qaHistory = state.qaHistory || [];
+        currentDocId = state.currentDocId || null;
+        currentFilename = state.currentFilename || null;
+        currentMode = state.currentMode || "single";
+      } catch (error) {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    }
+
+    // Progress Bar Management
+    function updateProgress(percent) {
+      progressBar.style.width = percent + "%";
+      if (percent > 0 && percent < 100) {
+        progressContainer.style.display = "block";
+      } else if (percent === 100) {
+        setTimeout(() => {
+          progressContainer.style.display = "none";
+          progressBar.style.width = "0%";
+        }, 500);
+      }
+    }
+
+    // Typewriter Effect for Answers
+    function typewriterEffect(element, text, speed = 10) {
+      element.textContent = "";
+      let index = 0;
+      
+      function type() {
+        if (index < text.length) {
+          element.textContent += text.charAt(index);
+          index++;
+          setTimeout(type, speed);
+        }
+      }
+      type();
+    }
+
+    // Mode Selection
+    function setMode(mode) {
+      currentMode = mode;
+      document.getElementById("single-mode-btn").classList.toggle("active", mode === "single");
+      document.getElementById("multi-mode-btn").classList.toggle("active", mode === "multi");
+      document.getElementById("general-mode-btn").classList.toggle("active", mode === "general");
+
+      docList.style.display = mode === "multi" ? "block" : "none";
+
+      const configs = {
+        single: {
+          hint: "💡 Answers only from your selected PDF",
+          placeholder: "What is this document about?",
+          color: "#4f8ef7"
+        },
+        multi: {
+          hint: "🔍 Search across multiple documents simultaneously",
+          placeholder: "Search across all selected documents...",
+          color: "#4f8ef7"
+        },
+        general: {
+          hint: "✨ Ask any follow-up or general question freely",
+          placeholder: "Can I build this project in VS Code?",
+          color: "#4f8ef7"
+        }
+      };
+
+      const config = configs[mode];
+      modeHint.textContent = config.hint;
+      modeHint.className = `mode-hint ${mode === "general" ? "general" : "doc"}`;
+      questionInput.placeholder = config.placeholder;
+      answerBox.style.display = "none";
+      saveState();
+    }
+
+    function updateDocumentList() {
+      docListItems.innerHTML = Object.entries(allDocuments).map(([id, name]) => `
+        <label class="doc-list-item">
+          <input type="checkbox" data-doc-id="${id}" ${selectedDocIds.includes(id) ? "checked" : ""} 
+                 onchange="toggleDocSelection(this)">
+          <span class="doc-list-label">${name}</span>
+        </label>
+      `).join("");
+    }
+
+    function toggleDocSelection(checkbox) {
+      const docId = checkbox.dataset.docId;
+      if (checkbox.checked) {
+        if (!selectedDocIds.includes(docId)) selectedDocIds.push(docId);
+      } else {
+        selectedDocIds = selectedDocIds.filter(id => id !== docId);
+      }
+      saveState();
+    }
+
+    // Upload Area Events
     uploadArea.addEventListener("dragover", e => {
       e.preventDefault();
       uploadArea.classList.add("dragover");
@@ -409,92 +792,112 @@
       uploadBtn.disabled = false;
     }
 
-    // Upload PDF
+    // Upload PDF with Progress
     uploadBtn.addEventListener("click", async () => {
       const file = fileInput.files[0];
       if (!file) return;
 
       uploadBtn.disabled = true;
-      uploadStatus.className = "status loading";
-      uploadStatus.innerHTML = `<span class="spinner"></span> Uploading and indexing ${file.name}...`;
+      uploadBtn.classList.add("processing");
+      updateProgress(10);
 
       const formData = new FormData();
       formData.append("file", file);
 
       try {
+        updateProgress(30);
+
         const res = await fetch(`${API}/upload`, {
           method: "POST",
           body: formData
         });
+
+        updateProgress(70);
 
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || "Upload failed");
 
         currentDocId = data.doc_id;
         currentFilename = data.filename;
+        allDocuments[data.doc_id] = data.filename;
 
-        uploadStatus.className = "status success";
-        uploadStatus.innerHTML = `✅ Indexed ${data.chunks_stored} chunks from "${data.filename}"`;
+        if (!selectedDocIds.includes(data.doc_id)) {
+          selectedDocIds.push(data.doc_id);
+        }
 
-        docName.textContent = data.filename;
+        updateProgress(100);
+        updateDocumentList();
+        saveState();
+
         askSection.style.display = "block";
         askSection.scrollIntoView({ behavior: "smooth" });
 
-      } catch (err) {
-        uploadStatus.className = "status error";
-        uploadStatus.textContent = `❌ ${err.message}`;
+        // Reset
+        fileNameEl.textContent = "";
+        fileInput.value = "";
         uploadBtn.disabled = false;
+        uploadBtn.classList.remove("processing");
+
+      } catch (err) {
+        updateProgress(0);
+        uploadBtn.disabled = false;
+        uploadBtn.classList.remove("processing");
+        alert(`Upload failed: ${err.message}`);
       }
     });
 
-    // Ask question
+    // Ask Question
     askBtn.addEventListener("click", async () => {
       const question = questionInput.value.trim();
-      if (!question) return;
+      if (!question) {
+        alert("Please ask a question first");
+        return;
+      }
+
+      if (currentMode === "multi" && selectedDocIds.length === 0) {
+        alert("Select at least one document for multi-search");
+        return;
+      }
 
       askBtn.disabled = true;
+      askBtn.classList.add("processing");
       askBtn.innerHTML = `<span class="spinner"></span> Thinking...`;
       answerBox.style.display = "none";
 
       try {
         let data;
+        let endpoint = currentMode === "single" ? "/ask" : currentMode === "multi" ? "/ask-multi" : "/general-ask";
+        let payload = currentMode === "single" ? { doc_id: currentDocId, question }
+                    : currentMode === "multi" ? { doc_ids: selectedDocIds, question }
+                    : { question };
 
-        if (currentMode === "doc") {
-          const res = await fetch(`${API}/ask`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ doc_id: currentDocId, question })
-          });
-          data = await res.json();
-          if (!res.ok) throw new Error(data.detail || "Search failed");
+        const res = await fetch(`${API}${endpoint}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
 
-          modeLabel.textContent = "📄 Document";
-          modeLabel.className = "mode-label doc";
-          sourcesTag.textContent = `Based on ${data.sources_used} relevant sections from the document`;
+        data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Search failed");
 
+        // Set mode label
+        if (currentMode === "single") {
+          modeLabel.textContent = "📄 Single Document";
+          sourcesTag.textContent = `Based on ${data.sources_used} relevant sections`;
+        } else if (currentMode === "multi") {
+          modeLabel.textContent = `📚 ${selectedDocIds.length} Documents`;
+          sourcesTag.textContent = `Based on ${data.total_chunks_searched} sections from ${selectedDocIds.length} docs`;
         } else {
-          const res = await fetch(`${API}/general-ask`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ question })
-          });
-          data = await res.json();
-          if (!res.ok) throw new Error(data.detail || "Request failed");
-
           modeLabel.textContent = "💬 General Chat";
-          modeLabel.className = "mode-label general";
           sourcesTag.textContent = "Answered from general knowledge";
         }
 
-        answerText.textContent = data.answer;
         answerBox.style.display = "block";
+        typewriterEffect(answerText, data.answer, 5);
 
-        qaHistory.unshift({
-          q: question,
-          a: data.answer,
-          mode: currentMode
-        });
+        qaHistory.unshift({ q: question, a: data.answer, mode: currentMode });
         renderHistory();
+        saveState();
 
         questionInput.value = "";
 
@@ -503,7 +906,8 @@
         answerBox.style.display = "block";
       } finally {
         askBtn.disabled = false;
-        askBtn.textContent = "Ask";
+        askBtn.classList.remove("processing");
+        askBtn.textContent = "Ask Now";
       }
     });
 
@@ -515,14 +919,26 @@
     });
 
     function renderHistory() {
-      if (qaHistory.length <= 1) return;
-      historyEl.innerHTML = qaHistory.slice(1).map(item => `
-        <div class="history-item">
-          <div class="q">${item.mode === "doc" ? "📄" : "💬"} ${item.q}</div>
-          <div class="a">${item.a}</div>
-        </div>
-      `).join("");
+      if (qaHistory.length === 0) {
+        historyItemsEl.innerHTML = '<div class="history-item"><div class="a">No saved history yet. Ask a question and it will stay here on this browser.</div></div>';
+        return;
+      }
+
+      historyItemsEl.innerHTML = qaHistory.map(item => {
+        const icon = item.mode === "single" ? "📄" : item.mode === "multi" ? "📚" : "💬";
+        return `
+          <div class="history-item">
+            <div class="q">${icon} ${item.q}</div>
+            <div class="a">${item.a}</div>
+          </div>
+        `;
+      }).join("");
     }
+
+    loadState();
+    updateDocumentList();
+    renderHistory();
+    setMode(currentMode);
   </script>
 </body>
 </html>

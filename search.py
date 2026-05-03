@@ -23,8 +23,7 @@ def embed_query(question: str) -> list[float]:
 
 def search_chunks(doc_id: str, question: str, top_k: int = 5) -> list[str]:
     """
-    Searches ChromaDB for the most relevant chunks
-    to the user's question.
+    Searches ChromaDB for the most relevant chunks in a single document.
     """
     collection = chroma_client.get_collection(name=doc_id)
 
@@ -39,10 +38,52 @@ def search_chunks(doc_id: str, question: str, top_k: int = 5) -> list[str]:
     return chunks
 
 
-def ask_gemini(question: str, context_chunks: list[str]) -> str:
+def search_chunks_multi(doc_ids: list[str], question: str, top_k: int = 5) -> list[dict]:
+    """
+    Searches across multiple documents and returns chunks with source info.
+    Returns list of dicts: {"doc_id": str, "chunk": str}
+    """
+    query_embedding = embed_query(question)
+    all_results = []
+
+    for doc_id in doc_ids:
+        try:
+            collection = chroma_client.get_collection(name=doc_id)
+            results = collection.query(
+                query_embeddings=[query_embedding],
+                n_results=min(top_k // len(doc_ids), collection.count())
+            )
+            
+            for chunk in results["documents"][0]:
+                all_results.append({"doc_id": doc_id, "chunk": chunk})
+        except Exception as e:
+            print(f"  Warning: Could not search document {doc_id}: {e}")
+
+    # Sort by relevance (simple approach: results are already ranked per doc)
+    return all_results[:top_k]
+
+
+def ask_gemini(question: str, context_chunks: list[str], multi_doc: bool = False) -> str:
+    """
+    Generates answer from context chunks.
+    If multi_doc=True, assumes chunks already include source info.
+    """
     context = "\n\n---\n\n".join(context_chunks)
 
-    prompt = f"""You are a helpful assistant for DocuMind, a smart document search app.
+    if multi_doc:
+        prompt = f"""You are a helpful assistant for DocuMind, a smart document search app.
+Answer the user's question using ONLY the document excerpts provided below.
+If the answer is not found in the excerpts, say "I couldn't find that information in the documents."
+Never make up information. You are searching across multiple documents.
+
+DOCUMENT EXCERPTS:
+{context}
+
+QUESTION: {question}
+
+ANSWER:"""
+    else:
+        prompt = f"""You are a helpful assistant for DocuMind, a smart document search app.
 Answer the user's question using ONLY the document excerpts provided below.
 If the answer is not found in the excerpts, say "I couldn't find that information in the document."
 Never make up information.
@@ -65,6 +106,7 @@ ANSWER:"""
 def search_and_answer(doc_id: str, question: str) -> dict:
     """
     Full query pipeline: embed question → search → answer.
+    Single document search.
     Returns both the answer and the source chunks used.
     """
     print(f"Searching for: {question}")
@@ -73,12 +115,40 @@ def search_and_answer(doc_id: str, question: str) -> dict:
     print(f"  Found {len(chunks)} relevant chunks")
 
     print("  Asking Gemini...")
-    answer = ask_gemini(question, chunks)
+    answer = ask_gemini(question, chunks, multi_doc=False)
 
     return {
         "question": question,
         "answer": answer,
         "source_chunks": chunks
+    }
+
+
+def search_and_answer_multi(doc_ids: list[str], question: str) -> dict:
+    """
+    Full query pipeline for multiple documents.
+    Returns answer and source chunks with document IDs.
+    """
+    print(f"Searching across {len(doc_ids)} document(s) for: {question}")
+
+    results = search_chunks_multi(doc_ids, question)
+    print(f"  Found {len(results)} relevant chunks")
+
+    # Format context with source info
+    context_with_sources = []
+    for result in results:
+        source_text = f"[From {result['doc_id']}]\n{result['chunk']}"
+        context_with_sources.append(source_text)
+
+    print("  Asking Gemini...")
+    answer = ask_gemini(question, context_with_sources, multi_doc=True)
+
+    return {
+        "question": question,
+        "answer": answer,
+        "doc_ids": doc_ids,
+        "source_chunks": results,
+        "chunk_count": len(results)
     }
 
 def general_ask(question: str) -> str:
