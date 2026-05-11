@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DOCUMIND - AI Document Search</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="uploads/donna%20maxwell%20%281%29.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&family=Archivo+Black&display=swap" rel="stylesheet">
   <style>
     * {
       margin: 0;
@@ -67,7 +68,15 @@
       background-clip: text;
       margin-bottom: 8px;
       letter-spacing: -1px;
-      font-family: 'Space Mono', monospace;
+      font-family: 'Archivo Black', sans-serif;
+    }
+
+    .brand-logo {
+      width: 1.25em;
+      height: 1.25em;
+      margin-right: 0.28em;
+      vertical-align: -0.22em;
+      display: inline-block;
     }
 
     .subtitle {
@@ -571,7 +580,7 @@
 <body>
   <div class="container">
     <header>
-      <h1>📚 DOCUMIND</h1>
+      <h1><img src="uploads/donna%20maxwell%20%281%29.svg" alt="DocuMind logo" class="brand-logo">DOCUMIND</h1>
       <p class="subtitle">AI-Powered Document Intelligence • Search • Analyze • Understand</p>
     </header>
 
@@ -656,7 +665,6 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         allDocuments,
         selectedDocIds,
-        qaHistory,
         currentDocId,
         currentFilename,
         currentMode
@@ -671,7 +679,6 @@
         const state = JSON.parse(raw);
         allDocuments = state.allDocuments || {};
         selectedDocIds = state.selectedDocIds || [];
-        qaHistory = state.qaHistory || [];
         currentDocId = state.currentDocId || null;
         currentFilename = state.currentFilename || null;
         currentMode = state.currentMode || "single";
@@ -706,6 +713,33 @@
         }
       }
       type();
+    }
+
+    function formatHistoryTime(item) {
+      if (item.displayTime) return item.displayTime;
+      if (item.timestamp) return new Date(item.timestamp).toLocaleString();
+      return "";
+    }
+
+    async function loadHistory() {
+      try {
+        const res = await fetch(`${API}/history`);
+        const data = await res.json();
+        qaHistory = Array.isArray(data.history) ? data.history : [];
+      } catch (error) {
+        qaHistory = [];
+      }
+
+      renderHistory();
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
     }
 
     // Mode Selection
@@ -864,6 +898,20 @@
       askBtn.innerHTML = `<span class="spinner"></span> Thinking...`;
       answerBox.style.display = "none";
 
+      const timestamp = new Date();
+      const historyEntry = {
+        q: question,
+        a: "",
+        mode: currentMode,
+        timestamp: timestamp.toISOString(),
+        displayTime: timestamp.toLocaleString(),
+        docNames: currentMode === "single"
+          ? [currentDocId ? (allDocuments[currentDocId] || currentFilename || currentDocId) : "General chat"]
+          : currentMode === "multi"
+            ? selectedDocIds.map(id => allDocuments[id] || id)
+            : []
+      };
+
       try {
         let data;
         let endpoint = currentMode === "single" ? "/ask" : currentMode === "multi" ? "/ask-multi" : "/general-ask";
@@ -895,7 +943,8 @@
         answerBox.style.display = "block";
         typewriterEffect(answerText, data.answer, 5);
 
-        qaHistory.unshift({ q: question, a: data.answer, mode: currentMode });
+        const savedHistoryEntry = data.history_entry || { ...historyEntry, a: data.answer };
+        qaHistory.unshift(savedHistoryEntry);
         renderHistory();
         saveState();
 
@@ -926,10 +975,14 @@
 
       historyItemsEl.innerHTML = qaHistory.map(item => {
         const icon = item.mode === "single" ? "📄" : item.mode === "multi" ? "📚" : "💬";
+        const docLabel = item.mode === "general"
+          ? "General chat"
+          : (item.docNames && item.docNames.length ? item.docNames.join(", ") : "Unknown document");
         return `
           <div class="history-item">
-            <div class="q">${icon} ${item.q}</div>
-            <div class="a">${item.a}</div>
+            <div class="q">${icon} ${escapeHtml(item.q)}</div>
+            <div class="history-meta">${escapeHtml(docLabel)} • ${escapeHtml(formatHistoryTime(item))}</div>
+            <div class="a">${escapeHtml(item.a)}</div>
           </div>
         `;
       }).join("");
@@ -939,6 +992,7 @@
     updateDocumentList();
     renderHistory();
     setMode(currentMode);
+    loadHistory();
   </script>
 </body>
 </html>
