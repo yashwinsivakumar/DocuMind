@@ -6,7 +6,6 @@ import sqlite3
 import secrets
 from datetime import datetime
 from pathlib import Path
-from threading import Lock
 from fastapi import FastAPI, UploadFile, File, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -20,10 +19,8 @@ load_dotenv()
 
 app = FastAPI(title="DocuMind API")
 BASE_DIR = Path(__file__).resolve().parent
-HISTORY_FILE = BASE_DIR / "history_store.json"
 AUTH_DB_FILE = BASE_DIR / "auth.db"
 HISTORY_LIMIT = 200
-history_lock = Lock()
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,7 +32,6 @@ app.add_middleware(
 # In-memory store of uploaded documents
 # { doc_id: original_filename }
 documents = {}
-qa_history = []
 
 
 def get_auth_connection() -> sqlite3.Connection:
@@ -67,6 +63,20 @@ def init_auth_db() -> None:
             )
             """
         )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                question TEXT NOT NULL,
+                answer TEXT NOT NULL,
+                mode TEXT NOT NULL,
+                doc_names TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )
+            """
+        )
         connection.commit()
 
 
@@ -82,26 +92,6 @@ def now_iso() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
-def load_history() -> None:
-    global qa_history
-
-    if not HISTORY_FILE.exists():
-        qa_history = []
-        return
-
-    try:
-        with HISTORY_FILE.open("r", encoding="utf-8") as file:
-            loaded_history = json.load(file)
-            qa_history = loaded_history if isinstance(loaded_history, list) else []
-    except Exception:
-        qa_history = []
-
-
-def persist_history() -> None:
-    with HISTORY_FILE.open("w", encoding="utf-8") as file:
-        json.dump(qa_history, file, ensure_ascii=False, indent=2)
-
-
 def build_history_entry(question: str, answer: str, mode: str, doc_names: list[str]) -> dict:
     return {
         "q": question,
@@ -112,14 +102,35 @@ def build_history_entry(question: str, answer: str, mode: str, doc_names: list[s
     }
 
 
-def add_history_entry(entry: dict) -> None:
-    with history_lock:
-        qa_history.insert(0, entry)
-        del qa_history[HISTORY_LIMIT:]
-        persist_history()
+def add_user_history_entry(user_id: int, entry: dict) -> None:
+    with get_auth_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute(
+            """
+            INSERT INTO history (user_id, question, answer, mode, doc_names, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                user_id,
+                entry["q"],
+                entry["a"],
+                entry["mode"],
+                json.dumps(entry["docNames"], ensure_ascii=False),
+                entry["timestamp"],
+            ),
+        )
+        cursor.execute(
+            """
+            DELETE FROM history
+            WHERE user_id = ? AND id NOT IN (
+                SELECT id FROM history WHERE user_id = ? ORDER BY id DESC LIMIT ?
+            )
+            """,
+            (user_id, user_id, HISTORY_LIMIT),
+        )
+        connection.commit()
 
 
-load_history()
 init_auth_db()
 
 
@@ -144,7 +155,16 @@ class LoginRequest(BaseModel):
 
 
 def get_current_user_id(authorization: str | None = Header(default=None)) -> int:
-    if not authorization or not authorization.startswith("Bearer "):
+    user_id = resolve_user_id_from_authorization(authorization)
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    return user_id
+
+
+def resolve_user_id_from_authorization(authorization: str | None) -> int | None:
+    if not authorization:
+        return None
+    if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing or invalid authorization header.")
 
     token = authorization.removeprefix("Bearer ").strip()
@@ -163,6 +183,10 @@ def get_current_user_id(authorization: str | None = Header(default=None)) -> int
         raise HTTPException(status_code=401, detail="Session expired or invalid token.")
 
     return int(session_row["user_id"])
+
+
+def get_optional_user_id(authorization: str | None = Header(default=None)) -> int | None:
+    return resolve_user_id_from_authorization(authorization)
 
 
 @app.get("/")
@@ -291,7 +315,7 @@ async def upload_pdf(file: UploadFile = File(...)):
 
 
 @app.post("/ask")
-async def ask_question(request: AskRequest):
+async def ask_question(request: AskRequest, authorization: str | None = Header(default=None)):
     """
     Accepts a doc_id and a question,
     returns an AI-generated answer from the document.
@@ -303,7 +327,9 @@ async def ask_question(request: AskRequest):
         result = search_and_answer(request.doc_id, request.question)
         doc_name = documents.get(request.doc_id, request.doc_id)
         history_entry = build_history_entry(request.question, result["answer"], "single", [doc_name])
-        add_history_entry(history_entry)
+        user_id = resolve_user_id_from_authorization(authorization)
+        if user_id is not None:
+            add_user_history_entry(user_id, history_entry)
 
         return {
             "doc_id": request.doc_id,
@@ -318,7 +344,7 @@ async def ask_question(request: AskRequest):
 
 
 @app.post("/ask-multi")
-async def ask_question_multi(request: AskMultiRequest):
+async def ask_question_multi(request: AskMultiRequest, authorization: str | None = Header(default=None)):
     """
     Accepts multiple doc_ids and a question,
     searches across all documents and returns an aggregated answer.
@@ -333,7 +359,9 @@ async def ask_question_multi(request: AskMultiRequest):
         result = search_and_answer_multi(request.doc_ids, request.question)
         doc_names = [documents.get(doc_id, doc_id) for doc_id in request.doc_ids]
         history_entry = build_history_entry(request.question, result["answer"], "multi", doc_names)
-        add_history_entry(history_entry)
+        user_id = resolve_user_id_from_authorization(authorization)
+        if user_id is not None:
+            add_user_history_entry(user_id, history_entry)
 
         return {
             "doc_ids": result["doc_ids"],
@@ -357,16 +385,52 @@ def list_documents():
 
 
 @app.get("/history")
-def get_history():
-    """Returns persisted Q&A history."""
-    return {"history": qa_history}
+def get_history(user_id: int | None = Depends(get_optional_user_id)):
+    """Returns persisted Q&A history for the signed-in user."""
+    if user_id is None:
+        return {"history": []}
+
+    with get_auth_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute(
+            """
+            SELECT question, answer, mode, doc_names, timestamp
+            FROM history
+            WHERE user_id = ?
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (user_id, HISTORY_LIMIT),
+        )
+        rows = cursor.fetchall()
+
+    history = []
+    for row in rows:
+        try:
+            doc_names = json.loads(row["doc_names"])
+            if not isinstance(doc_names, list):
+                doc_names = []
+        except Exception:
+            doc_names = []
+
+        history.append(
+            {
+                "q": row["question"],
+                "a": row["answer"],
+                "mode": row["mode"],
+                "timestamp": row["timestamp"],
+                "docNames": doc_names,
+            }
+        )
+
+    return {"history": history}
 
 class GeneralAskRequest(BaseModel):
     question: str
 
 
 @app.post("/general-ask")
-async def general_ask_endpoint(request: GeneralAskRequest):
+async def general_ask_endpoint(request: GeneralAskRequest, authorization: str | None = Header(default=None)):
     """
     Answers any general question without document context.
     """
@@ -377,7 +441,9 @@ async def general_ask_endpoint(request: GeneralAskRequest):
         from search import general_ask
         answer = general_ask(request.question)
         history_entry = build_history_entry(request.question, answer, "general", [])
-        add_history_entry(history_entry)
+        user_id = resolve_user_id_from_authorization(authorization)
+        if user_id is not None:
+            add_user_history_entry(user_id, history_entry)
         return {
             "question": request.question,
             "answer": answer,
